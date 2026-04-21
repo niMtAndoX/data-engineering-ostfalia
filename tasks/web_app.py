@@ -4,22 +4,19 @@ import tempfile
 from flask import Flask, render_template_string, request, send_file
 from werkzeug.utils import secure_filename
 
-from file_format_converter import (
-    OUTPUT_DIR,
-    convert_file,
-    get_available_columns,
-    preview_file,
-)
+from format_converter import convert
 
 
-# Initialisiert die minimale Flask-Anwendung und einen temporaeren Upload-Ordner.
-app = Flask(__name__)
-# Hochgeladene Dateien werden nicht im Projekt abgelegt, sondern nur temporaer gespeichert.
+BASE_DIR = Path(__file__).resolve().parent.parent
+OUTPUT_DIR = BASE_DIR / "output"
 UPLOAD_DIR = Path(tempfile.gettempdir()) / "file_converter_uploads"
+
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
+app = Flask(__name__)
 
-# Das HTML-Template enthaelt die komplette, bewusst kleine Weboberflaeche inklusive Styling.
+
 PAGE = """
 <!doctype html>
 <html lang="de">
@@ -118,8 +115,8 @@ PAGE = """
     <div class="page">
       <h1>Dateiformat Konverter</h1>
       <p class="hint">
-        Datei per Upload oder Dateipfad angeben, Zielformat waehlen und optional Spalten
-        als Komma-Liste einschränken. Die Ausgabedatei wird im Verzeichnis <code>output/</code> gespeichert.
+        Datei per Upload oder Dateipfad angeben, Zielformat waehlen und konvertieren.
+        Die Ausgabedatei wird im Verzeichnis <code>output/</code> gespeichert.
       </p>
 
       <form method="post" enctype="multipart/form-data">
@@ -135,13 +132,6 @@ PAGE = """
             <option value="{{ option }}" {% if option == target_format %}selected{% endif %}>{{ option|upper }}</option>
           {% endfor %}
         </select>
-
-        <label>Optionale Spalten</label>
-        <input type="text" name="columns" value="{{ columns or '' }}" placeholder="z.B. Name, Alter, Stadt">
-
-        {% if available_columns %}
-          <div class="hint">Erkannte Spalten: {{ available_columns|join(", ") }}</div>
-        {% endif %}
 
         <button type="submit">Konvertieren</button>
       </form>
@@ -167,33 +157,40 @@ PAGE = """
 """
 
 
-# Nimmt entweder einen Dateipfad aus dem Formular oder speichert einen Upload temporaer ab.
+def detect_format(file_name):
+    suffix = Path(file_name).suffix.lower().lstrip(".")
+    if suffix not in {"csv", "json", "xml"}:
+        raise ValueError("Unterstuetzt werden nur CSV-, JSON- und XML-Dateien.")
+    return suffix
+
+
+def default_output_path(input_file_name, target_format):
+    return OUTPUT_DIR / f"{Path(input_file_name).stem}.{target_format.lower()}"
+
+
+def preview_file(file_name):
+    with open(file_name, "r", encoding="utf-8", errors="replace") as file:
+        return file.read()
+
+
 def _resolve_input_file():
-    # Die Weboberflaeche erlaubt zwei Wege: einen lokalen Pfad eintippen oder eine Datei
-    # direkt im Browser hochladen.
     uploaded_file = request.files.get("upload")
     input_path = (request.form.get("file_path") or "").strip()
 
     if uploaded_file and uploaded_file.filename:
-        # Der Dateiname wird bereinigt, damit keine problematischen Sonderzeichen oder
-        # Pfadangaben aus dem Browser uebernommen werden.
         file_name = secure_filename(uploaded_file.filename)
         saved_path = UPLOAD_DIR / file_name
         uploaded_file.save(saved_path)
-        return str(saved_path)
+        return saved_path
 
-    # Wenn kein Upload vorhanden ist, wird der manuell eingegebene Pfad verwendet.
     if input_path:
-        return input_path
+        return Path(input_path)
 
     raise ValueError("Bitte waehle eine Datei aus oder gib einen Dateipfad an.")
 
 
-# Rendert das Formular und fuehrt bei POST die Konvertierung inklusive Vorschau aus.
 @app.route("/", methods=["GET", "POST"])
 def index():
-    # context sammelt alle Werte, die im HTML-Template angezeigt werden sollen.
-    # Dadurch bleibt die Darstellung zentral steuerbar.
     context = {
         "error": None,
         "result_path": None,
@@ -201,59 +198,36 @@ def index():
         "download_url": None,
         "file_path": "",
         "target_format": "json",
-        "columns": "",
-        "available_columns": [],
     }
 
     if request.method == "POST":
-        # Die Benutzereingaben werden aus dem Formular gelesen und in ein einheitliches
-        # Format gebracht.
         target_format = (request.form.get("target_format") or "json").lower()
-        columns_raw = (request.form.get("columns") or "").strip()
-        columns = [item.strip() for item in columns_raw.split(",") if item.strip()]
-
-        # Diese Werte werden zurueck ins Template gegeben, damit das Formular nach dem
-        # Absenden weiter ausgefuellt bleibt.
         context["target_format"] = target_format
-        context["columns"] = columns_raw
 
         try:
-            # Zuerst wird die Eingabedatei aufgeloest, egal ob sie aus einem Upload oder
-            # aus einem Dateipfad stammt.
             input_file = _resolve_input_file()
-            context["file_path"] = input_file
+            context["file_path"] = str(input_file)
 
-            # Vor der eigentlichen Konvertierung werden die erkannten Spalten geladen,
-            # damit der Benutzer nachvollziehen kann, welche Namen verfuegbar sind.
-            context["available_columns"] = get_available_columns(input_file)
+            input_format = detect_format(input_file)
+            if input_format == target_format:
+                raise ValueError("Quelldatei und Zielformat sind identisch.")
 
-            # Die Konvertierung selbst passiert ausschliesslich in file_format_converter.py.
-            result_path = convert_file(
-                input_file,
-                target_format,
-                selected_columns=columns or None,
-            )
+            result_path = default_output_path(input_file, target_format)
 
-            # Danach werden Speicherort, Vorschau und Download-Link fuer die Ausgabe
-            # vorbereitet, damit alles direkt im Browser sichtbar ist.
-            context["result_path"] = result_path
+            # Die eigentliche Konvertierung wird ausschliesslich ueber format_converter.py ausgefuehrt.
+            convert(str(input_file), input_format, str(result_path), target_format)
+
+            context["result_path"] = str(result_path)
             context["preview"] = preview_file(result_path)
-            context["download_url"] = f"/download/{Path(result_path).name}"
+            context["download_url"] = f"/download/{result_path.name}"
         except Exception as exc:
-            # Fachliche und technische Fehler werden als Text zur Seite durchgereicht,
-            # damit der Benutzer eine verstaendliche Rueckmeldung erhaelt.
             context["error"] = str(exc)
 
-    # Am Ende wird immer dieselbe Seite gerendert. Je nach Inhalt von context erscheinen
-    # dort Formular, Fehler, Ergebnis oder Vorschau.
     return render_template_string(PAGE, **context)
 
 
-# Stellt die erzeugte Datei aus dem output/-Ordner zum Download bereit.
 @app.route("/download/<path:file_name>")
 def download(file_name):
-    # Der Dateiname wird auf seinen reinen Namen reduziert, damit nur Dateien aus dem
-    # vorgesehenen output/-Ordner ausgeliefert werden.
     return send_file(OUTPUT_DIR / Path(file_name).name, as_attachment=True)
 
 
