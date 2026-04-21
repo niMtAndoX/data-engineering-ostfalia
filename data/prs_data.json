@@ -1,0 +1,79 @@
+{
+  "employees": [
+    {
+      "id": 1,
+      "name": "John Doe",
+      "age": 35,
+      "department": "Engineering",
+      "salary": 75000
+    },
+    {
+      "id": 2,
+      "name": "Jane Smith",
+      "age": 28,
+      "department": "Marketing",
+      "salary": 60000
+    },
+    {
+      "id": 3,
+      "name": "Alice Johnson",
+      "age": 40,
+      "department": "Finance",
+      "salary": 80000
+    },
+    /* Weitere Datenelemente */
+    /* Beispiel für mehr Datenelemente */
+    {
+      "id": 4,
+      "name": "Michael Brown",
+      "age": 32,
+      "department": "Human Resources",
+      "salary": 70000
+    },
+    {
+      "id": 5,
+      "name": "Emily Davis",
+      "age": 45,
+      "department": "Research",
+      "salary": 85000
+    },
+    {
+      "id": 6,
+      "name": "William Wilson",
+      "age": 38,
+      "department": "Operations",
+      "salary": 78000
+    },
+    /* Weitere Datenelemente */
+    {
+      "id": 7,
+      "name": "Sarah Taylor",
+      "age": 29,
+      "department": "Customer Service",
+      "salary": 62000
+    },
+    {
+      "id": 8,
+      "name": "David Martinez",
+      "age": 41,
+      "department": "Accounting",
+      "salary": 82000
+    },
+    /* Beispiel für mehr Datenelemente */
+    {
+      "id": 9,
+      "name": "Olivia Rodriguez",
+      "age": 33,
+      "department": "Legal",
+      "salary": 77000
+    },
+    {
+      "id": 10,
+      "name": "James Lee",
+      "age": 36,
+      "department": "Information Technology",
+      "salary": 90000
+    }
+    /* Weitere Datenelemente */
+  ]
+}

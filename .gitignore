@@ -1,0 +1,32 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+venv/
+
+# Environment files
+.env
+.env.*
+
+# Tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Generated application output
+output/*
+!output/.gitkeep
+
+# Temporary upload and local runtime files
+instance/
+
+# Compression exercise outputs that may be created in the project root
+*.huff
+*_restored.txt
+*_restored.csv
