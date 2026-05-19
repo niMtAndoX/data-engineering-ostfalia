@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Cäsar-Verschlüsselung</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <main class="container">
+        <section class="card">
+            <h1>Cäsar-Verschlüsselung</h1>
+            <p class="subtitle">
+                Texte verschlüsseln und entschlüsseln mit frei wählbarem Schlüssel
+            </p>
+
+            <form method="POST">
+                <label for="text">Text</label>
+                <textarea
+                    id="text"
+                    name="text"
+                    placeholder="Geben Sie hier Ihren Text ein..."
+                    required>{{ text }}</textarea>
+
+                <div class="grid">
+                    <div>
+                        <label for="schluessel">Schlüssel</label>
+                        <input
+                            type="number"
+                            id="schluessel"
+                            name="schluessel"
+                            value="{{ schluessel }}"
+                            required>
+                    </div>
+
+                    <div>
+                        <label for="modus">Aktion</label>
+                        <select id="modus" name="modus">
+                            <option value="verschluesseln"
+                                {% if modus == "verschluesseln" %}selected{% endif %}>
+                                Verschlüsseln
+                            </option>
+                            <option value="entschluesseln"
+                                {% if modus == "entschluesseln" %}selected{% endif %}>
+                                Entschlüsseln
+                            </option>
+                            <option value="kryptoanalyse"
+                                {% if modus == "kryptoanalyse" %}selected{% endif %}>
+                                Kryptoanalyse: Brute Force
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit">Ausführen</button>
+            </form>
+
+            {% if fehler %}
+                <div class="error">{{ fehler }}</div>
+            {% endif %}
+
+            {% if ergebnis %}
+                <section class="result">
+                    <h2>Ergebnis</h2>
+                    <p>{{ ergebnis }}</p>
+                </section>
+            {% endif %}
+            {% if analyse_ergebnisse %}
+            <section class="result">
+                <h2>Kryptoanalyse: Alle möglichen Schlüssel</h2>
+
+                <div class="analyse-liste">
+                    {% for schluessel, text in analyse_ergebnisse %}
+                        <div class="analyse-eintrag">
+                            <strong>Schlüssel {{ schluessel }}:</strong>
+                            <span>{{ text }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+        </section>
+    </main>
+</body>
+</html>
